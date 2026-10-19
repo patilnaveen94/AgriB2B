@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-surface-100 text-surface-800 font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Thin, unobtrusive scrollbars for data-dense panels */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  *::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    @apply bg-surface-300 rounded-full;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-400;
+  }
+}
+
+@layer components {
+  /* Focusable ring used across interactive elements */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-white;
+  }
+
+  /* Responsive table wrapper: horizontal scroll on small screens */
+  .table-scroll {
+    @apply w-full overflow-x-auto rounded-xl border border-surface-200 bg-white shadow-card;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbars for horizontal chip/quick-action rows on mobile */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* iOS safe-area padding helpers for edge-to-edge mobile chrome */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+
+  /* Remove the blue tap flash on mobile for a native feel */
+  .tap-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

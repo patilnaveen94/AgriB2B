@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// AgriFlow B2B — Cloud Storage rules.
+// Fertilizer license documents live under licenses/{uid}/...
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function isStaff() {
+      return isSignedIn()
+        && (request.auth.token.role == 'staff'
+            || request.auth.token.role == 'super_admin');
+    }
+
+    match /licenses/{uid}/{fileName} {
+      // Owner can upload their own license during registration; staff review.
+      allow read: if isStaff() || (isSignedIn() && request.auth.uid == uid);
+      allow write: if isSignedIn() && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    match /products/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
+    }
+  }
+}

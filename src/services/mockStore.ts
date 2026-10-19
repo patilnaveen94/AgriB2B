@@ -1,0 +1,55 @@
+import type { SeedData } from '@/data/seed';
+import { buildSeedData } from '@/data/seed';
+
+/**
+ * A tiny Firestore-shaped, localStorage-backed store that powers demo mode.
+ * It is intentionally simple: each collection is an array of documents. The
+ * service layer (`api.ts`) queries/mutates these arrays and persists after
+ * every write, so a page refresh keeps state.
+ */
+
+const STORAGE_KEY = 'agriflow.db.v4';
+
+type StoreShape = SeedData;
+
+function load(): StoreShape {
+  if (typeof window === 'undefined') return buildSeedData();
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as StoreShape;
+  } catch {
+    /* fall through to seed */
+  }
+  const seeded = buildSeedData();
+  // NB: write directly here rather than calling persist(). load() runs while
+  // `store` is still in its temporal dead zone, so persist()'s `store = next`
+  // assignment would throw "Cannot access 'store' before initialization".
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+  } catch {
+    /* ignore write failures (e.g. private mode) */
+  }
+  return seeded;
+}
+
+let store: StoreShape = load();
+
+function persist(next: StoreShape = store): void {
+  store = next;
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  }
+}
+
+export const mockStore = {
+  get data(): StoreShape {
+    return store;
+  },
+  save: () => persist(),
+  /** Wipe local state and re-seed. Useful for demos and tests. */
+  reset(): StoreShape {
+    const seeded = buildSeedData();
+    persist(seeded);
+    return seeded;
+  },
+};
