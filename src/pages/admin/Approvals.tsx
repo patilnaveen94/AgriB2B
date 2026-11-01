@@ -7,15 +7,13 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineLoader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
-import { Field, Input, Select, Textarea } from '@/components/ui/Field';
-import { accountStatusMeta, priceTierMeta } from '@/components/ui/statusMeta';
+import { Field, Input, Textarea } from '@/components/ui/Field';
+import { accountStatusMeta } from '@/components/ui/statusMeta';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi } from '@/services/api';
-import type { AppUser, PriceTier } from '@/types';
+import type { AppUser } from '@/types';
 import { formatDate } from '@/lib/utils';
-
-const TIERS: PriceTier[] = ['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'];
 
 export function ApprovalsPage() {
   const { user } = useAuth();
@@ -25,7 +23,6 @@ export function ApprovalsPage() {
   const [approving, setApproving] = useState<AppUser | null>(null);
   const [rejecting, setRejecting] = useState<AppUser | null>(null);
   const [creditLimit, setCreditLimit] = useState('100000');
-  const [tier, setTier] = useState<PriceTier>('STANDARD');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +42,6 @@ export function ApprovalsPage() {
     try {
       await usersApi.approve(approving.uid, {
         creditLimit: parseFloat(creditLimit) || 0,
-        priceTier: tier,
         approvedBy: user.uid,
       });
       toast.success(`${approving.business.businessName} approved.`);
@@ -149,7 +145,6 @@ export function ApprovalsPage() {
                     onClick={() => {
                       setApproving(r);
                       setCreditLimit('100000');
-                      setTier('STANDARD');
                     }}
                   >
                     <Check className="h-4 w-4" />
@@ -178,7 +173,7 @@ export function ApprovalsPage() {
         open={!!approving}
         onClose={() => setApproving(null)}
         title={`Approve ${approving?.business.businessName ?? ''}`}
-        subtitle="Set the credit limit and price tier for this retailer."
+        subtitle="Set a suitable credit limit for this retailer."
         footer={
           <>
             <Button variant="outline" onClick={() => setApproving(null)}>
@@ -199,19 +194,6 @@ export function ApprovalsPage() {
               value={creditLimit}
               onChange={(e) => setCreditLimit(e.target.value)}
             />
-          </Field>
-          <Field label="Price tier" htmlFor="tier">
-            <Select
-              id="tier"
-              value={tier}
-              onChange={(e) => setTier(e.target.value as PriceTier)}
-            >
-              {TIERS.map((t) => (
-                <option key={t} value={t}>
-                  {priceTierMeta[t].label}
-                </option>
-              ))}
-            </Select>
           </Field>
         </div>
       </Modal>

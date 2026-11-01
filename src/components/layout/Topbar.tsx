@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Bell,
   ChevronDown,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   ShoppingCart,
-  Sprout,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { priceTierMeta } from '@/components/ui/statusMeta';
-import { Badge } from '@/components/ui/Badge';
+import { PWAInstallButton } from './PWAInstallButton';
+import { BRAND_FULL_NAME } from '@/config/brand';
 
 export function Topbar({
   onToggleCollapse,
@@ -45,8 +43,9 @@ export function Topbar({
         className="tap-transparent flex items-center gap-2 lg:hidden"
         aria-label="Home"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
-          <Sprout className="h-5 w-5" />
+        <img src="/balaji-logo.svg" alt="" className="h-9 w-9 rounded-xl shadow-sm" />
+        <span className="max-w-[5.5rem] truncate text-[10px] font-bold leading-tight text-brand-800 sm:max-w-28 sm:text-xs">
+          {BRAND_FULL_NAME}
         </span>
       </Link>
 
@@ -84,14 +83,6 @@ export function Topbar({
         </Link>
       )}
 
-      <button
-        className="focus-ring tap-transparent relative rounded-lg p-2 text-surface-600 hover:bg-surface-100"
-        aria-label="Notifications"
-      >
-        <Bell className="h-5 w-5" />
-        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-rose-500" />
-      </button>
-
       {/* User menu */}
       <div className="relative">
         <button
@@ -119,15 +110,8 @@ export function Topbar({
                   {user?.business.ownerName}
                 </p>
                 <p className="truncate text-xs text-surface-500">{user?.email}</p>
-                {role === 'retailer' && user?.retailer && (
-                  <Badge
-                    tone={priceTierMeta[user.retailer.priceTier].tone}
-                    className="mt-2"
-                  >
-                    {priceTierMeta[user.retailer.priceTier].label} Tier
-                  </Badge>
-                )}
               </div>
+              <PWAInstallButton />
               <button
                 onClick={() => {
                   setMenuOpen(false);

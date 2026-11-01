@@ -1,7 +1,6 @@
 import type {
   AccountStatus,
   OrderStatus,
-  PriceTier,
   ProductCategory,
   RakeStatus,
   StaffFunction,
@@ -47,12 +46,17 @@ export const categoryMeta: Record<
   SEED: { label: 'Seed', tone: 'violet' },
 };
 
-export const priceTierMeta: Record<PriceTier, { label: string; tone: BadgeTone }> = {
-  STANDARD: { label: 'Standard', tone: 'slate' },
-  SILVER: { label: 'Silver', tone: 'sky' },
-  GOLD: { label: 'Gold', tone: 'amber' },
-  PLATINUM: { label: 'Platinum', tone: 'violet' },
-};
+export function categoryMetaFor(category: ProductCategory) {
+  return (
+    categoryMeta[category] ?? {
+      label: category
+        .replace(/[_-]+/g, ' ')
+        .toLowerCase()
+        .replace(/\b[a-z]/g, (letter) => letter.toUpperCase()),
+      tone: 'slate' as const,
+    }
+  );
+}
 
 export const staffFunctionLabel: Record<StaffFunction, string> = {
   godown_worker: 'Godown Worker',

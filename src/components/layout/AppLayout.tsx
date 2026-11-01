@@ -5,6 +5,7 @@ import { Topbar } from './Topbar';
 import { BottomNav } from './BottomNav';
 import { navFor } from './navConfig';
 import { useAuth } from '@/context/AuthContext';
+import { BRAND_NAME } from '@/config/brand';
 
 const COLLAPSE_KEY = 'agriflow.sidebar.collapsed';
 
@@ -13,13 +14,13 @@ function usePageTitle(): string {
   const { role } = useAuth();
   const { pathname } = useLocation();
   return useMemo(() => {
-    if (!role) return 'AgriFlow';
+    if (!role) return BRAND_NAME;
     const items = navFor(role).flatMap((s) => s.items);
     // Longest matching path wins so nested routes resolve correctly.
     const match = items
       .filter((i) => (i.end ? pathname === i.to : pathname.startsWith(i.to)))
       .sort((a, b) => b.to.length - a.to.length)[0];
-    return match?.label ?? 'AgriFlow';
+    return match?.label ?? BRAND_NAME;
   }, [role, pathname]);
 }
 

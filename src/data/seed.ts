@@ -4,11 +4,13 @@ import type {
   Batch,
   CreditLedgerEntry,
   InventoryLog,
+  InventoryCategory,
   Order,
   Product,
   ProductCategory,
   RakeArrival,
 } from '@/types';
+import { DEFAULT_INVENTORY_CATEGORIES } from '@/types';
 import { isoInDays, nowIso, priceLine } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -87,6 +89,7 @@ export interface SeedData {
   rakeArrivals: RakeArrival[];
   ledgers: CreditLedgerEntry[];
   inventoryLogs: InventoryLog[];
+  categories: InventoryCategory[];
 }
 
 // --- Users ------------------------------------------------------------------
@@ -99,15 +102,15 @@ const users: AppUser[] = [
     staffFunction: 'super_admin',
     status: 'ACTIVE',
     business: {
-      businessName: 'AgriFlow HQ',
+      businessName: 'Shri Balaji Fertilizer',
       ownerName: 'Meera Nair',
       phone: '+91 98200 10001',
       taxId: '27AAAAA0000A1Z5',
       fertilizerLicenseNo: 'HQ-LIC-0001',
-      addressLine: 'Warehouse Complex, MIDC',
-      city: 'Pune',
-      state: 'Maharashtra',
-      pincode: '411019',
+      addressLine: 'Mahalingpur',
+      city: 'Mahalingpur',
+      state: 'Karnataka',
+      pincode: '',
     },
     createdAt: isoInDays(-120),
   },
@@ -118,15 +121,15 @@ const users: AppUser[] = [
     staffFunction: 'godown_worker',
     status: 'ACTIVE',
     business: {
-      businessName: 'AgriFlow HQ',
+      businessName: 'Shri Balaji Fertilizer',
       ownerName: 'Ravi Shinde',
       phone: '+91 98200 10002',
       taxId: '27AAAAA0000A1Z5',
       fertilizerLicenseNo: 'HQ-LIC-0001',
-      addressLine: 'Warehouse Complex, MIDC',
-      city: 'Pune',
-      state: 'Maharashtra',
-      pincode: '411019',
+      addressLine: 'Mahalingpur',
+      city: 'Mahalingpur',
+      state: 'Karnataka',
+      pincode: '',
     },
     createdAt: isoInDays(-110),
   },
@@ -137,15 +140,15 @@ const users: AppUser[] = [
     staffFunction: 'sales_executive',
     status: 'ACTIVE',
     business: {
-      businessName: 'AgriFlow HQ',
+      businessName: 'Shri Balaji Fertilizer',
       ownerName: 'Priya Deshmukh',
       phone: '+91 98200 10003',
       taxId: '27AAAAA0000A1Z5',
       fertilizerLicenseNo: 'HQ-LIC-0001',
-      addressLine: 'Warehouse Complex, MIDC',
-      city: 'Pune',
-      state: 'Maharashtra',
-      pincode: '411019',
+      addressLine: 'Mahalingpur',
+      city: 'Mahalingpur',
+      state: 'Karnataka',
+      pincode: '',
     },
     createdAt: isoInDays(-108),
   },
@@ -168,7 +171,6 @@ const users: AppUser[] = [
     retailer: {
       creditLimit: 500000,
       outstandingBalance: 182500,
-      priceTier: 'GOLD',
       licenseFileName: 'green-valley-license.pdf',
     },
     createdAt: isoInDays(-90),
@@ -194,7 +196,6 @@ const users: AppUser[] = [
     retailer: {
       creditLimit: 300000,
       outstandingBalance: 96000,
-      priceTier: 'SILVER',
       licenseFileName: 'kisan-seva-license.pdf',
     },
     createdAt: isoInDays(-60),
@@ -220,7 +221,6 @@ const users: AppUser[] = [
     retailer: {
       creditLimit: 0,
       outstandingBalance: 0,
-      priceTier: 'STANDARD',
       licenseFileName: 'shetkari-license.pdf',
     },
     createdAt: isoInDays(-3),
@@ -244,7 +244,6 @@ const users: AppUser[] = [
     retailer: {
       creditLimit: 0,
       outstandingBalance: 0,
-      priceTier: 'STANDARD',
       licenseFileName: 'agrostar-license.pdf',
     },
     createdAt: isoInDays(-1),
@@ -911,7 +910,7 @@ const announcements: Announcement[] = [
     id: 'ann_1',
     type: 'SCHEME',
     title: 'Kharif Booster — 9% off Urea',
-    body: 'Order 500+ bags of Urea before month end and unlock the top volume tier plus priority rake allocation.',
+    body: 'Order 500+ bags of Urea before month end to unlock additional quantity-based savings and priority rake allocation.',
     category: 'FERTILIZER',
     startsAt: isoInDays(-4),
     endsAt: isoInDays(20),
@@ -1063,6 +1062,7 @@ export function buildSeedData(): SeedData {
     rakeArrivals,
     ledgers,
     inventoryLogs,
+    categories: DEFAULT_INVENTORY_CATEGORIES.map((category) => ({ ...category })),
   };
 }
 
@@ -1071,7 +1071,7 @@ export const DEMO_LOGINS = [
   { label: 'Super Admin', email: 'admin@agriflow.test', role: 'super_admin' },
   { label: 'Godown Worker', email: 'godown@agriflow.test', role: 'staff' },
   { label: 'Sales Executive', email: 'sales@agriflow.test', role: 'staff' },
-  { label: 'Retailer (Gold)', email: 'retailer@agriflow.test', role: 'retailer' },
+  { label: 'Retailer', email: 'retailer@agriflow.test', role: 'retailer' },
 ] as const;
 
 export const DEMO_PASSWORD = 'demo1234';

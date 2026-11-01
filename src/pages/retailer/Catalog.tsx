@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineLoader } from '@/components/ui/Loader';
 import { Input } from '@/components/ui/Field';
-import { categoryMeta } from '@/components/ui/statusMeta';
+import { categoryMetaFor } from '@/components/ui/statusMeta';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/components/ui/Toast';
 import { productsApi } from '@/services/api';
@@ -16,11 +16,6 @@ import {
   type ProductCategory,
 } from '@/types';
 import { cx, formatCurrency, formatNumber, grossUnit } from '@/lib/utils';
-
-const FILTERS: { value: ProductCategory | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'All' },
-  ...PRODUCT_CATEGORIES,
-];
 
 export function CatalogPage() {
   const { items, add, setQty } = useCart();
@@ -55,6 +50,16 @@ export function CatalogPage() {
       return matchesCat && matchesQuery;
     });
   }, [products, query, category]);
+  const filters = useMemo(
+    () => [
+      { value: 'ALL' as const, label: 'All' },
+      ...PRODUCT_CATEGORIES,
+      ...Array.from(new Set(products.map((product) => product.category)))
+        .filter((value) => !PRODUCT_CATEGORIES.some((item) => item.value === value))
+        .map((value) => ({ value, label: categoryMetaFor(value).label })),
+    ],
+    [products],
+  );
 
   const handleAdd = (product: Product) => {
     add(product, Math.max(1, product.minOrderQty || 1));
@@ -87,7 +92,7 @@ export function CatalogPage() {
 
       {/* Category chips */}
       <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        {FILTERS.map((f) => {
+        {filters.map((f) => {
           const active = category === f.value;
           return (
             <button
@@ -135,8 +140,8 @@ export function CatalogPage() {
                   </div>
                 )}
                 <span className="absolute left-2 top-2">
-                  <Badge tone={categoryMeta[p.category].tone}>
-                    {categoryMeta[p.category].label}
+                  <Badge tone={categoryMetaFor(p.category).tone}>
+                    {categoryMetaFor(p.category).label}
                   </Badge>
                 </span>
               </div>

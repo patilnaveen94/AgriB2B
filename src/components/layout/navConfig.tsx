@@ -2,6 +2,7 @@ import {
   BarChart3,
   Boxes,
   ClipboardList,
+  FileBarChart2,
   LayoutDashboard,
   Megaphone,
   PackageSearch,
@@ -34,13 +35,14 @@ const retailerNav: NavSection[] = [
       { to: '/app', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard, end: true },
       { to: '/app/catalog', label: 'Product Catalog', shortLabel: 'Shop', icon: PackageSearch },
       { to: '/app/rakes', label: 'Upcoming Rakes', shortLabel: 'Rakes', icon: Train },
-      { to: '/app/cart', label: 'Cart & Checkout', shortLabel: 'Cart', icon: ShoppingCart },
     ],
   },
   {
     heading: 'Activity',
     items: [
       { to: '/app/orders', label: 'Order Tracker', shortLabel: 'Orders', icon: ClipboardList },
+      { to: '/app/reports', label: 'Purchase Reports', shortLabel: 'Reports', icon: FileBarChart2 },
+      { to: '/app/cart', label: 'Cart & Checkout', shortLabel: 'Cart', icon: ShoppingCart },
     ],
   },
 ];
@@ -58,19 +60,33 @@ const staffNav: NavSection[] = [
       { to: '/admin/orders', label: 'Order Queue', shortLabel: 'Orders', icon: ClipboardList },
       { to: '/admin/inventory', label: 'Inventory & Batches', shortLabel: 'Stock', icon: Boxes },
       { to: '/admin/schemes', label: 'Schemes & Rakes', shortLabel: 'Schemes', icon: Megaphone },
-    ],
-  },
-  {
-    heading: 'Accounts',
-    items: [
-      { to: '/admin/approvals', label: 'Retailer Approvals', shortLabel: 'Approvals', icon: UserCheck },
+      { to: '/admin/reports', label: 'Business Reports', shortLabel: 'Reports', icon: FileBarChart2 },
     ],
   },
 ];
 
 /** Sidebar navigation resolved per role. */
 export function navFor(role: UserRole): NavSection[] {
-  return role === 'retailer' ? retailerNav : staffNav;
+  if (role === 'retailer') {
+    return retailerNav;
+  }
+  if (role === 'super_admin') {
+    return [
+      ...staffNav,
+      {
+        heading: 'Accounts',
+        items: [
+          {
+            to: '/admin/approvals',
+            label: 'Retailer Approvals',
+            shortLabel: 'Approvals',
+            icon: UserCheck,
+          },
+        ],
+      },
+    ];
+  }
+  return staffNav;
 }
 
 export const SECONDARY_ICONS = { Truck };

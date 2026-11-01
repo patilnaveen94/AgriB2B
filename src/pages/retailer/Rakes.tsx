@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineLoader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { Field, Input, Select } from '@/components/ui/Field';
-import { categoryMeta, rakeStatusMeta } from '@/components/ui/statusMeta';
+import { categoryMetaFor, rakeStatusMeta } from '@/components/ui/statusMeta';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { ordersApi, rakesApi } from '@/services/api';
@@ -207,7 +207,7 @@ export function RakesPage() {
                         <div key={it.productId}>
                           <div className="flex items-center justify-between gap-2 text-sm">
                             <div className="flex min-w-0 items-center gap-2">
-                              <Badge tone={categoryMeta[it.category].tone}>×{it.ratio}</Badge>
+                              <Badge tone={categoryMetaFor(it.category).tone}>×{it.ratio}</Badge>
                               <span className="truncate font-medium text-surface-800">
                                 {it.productName}
                               </span>

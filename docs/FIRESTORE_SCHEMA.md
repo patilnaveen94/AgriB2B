@@ -1,4 +1,4 @@
-# AgriFlow B2B — Firestore Data Schema
+# Shri Balaji Fertilizer — Firestore Data Schema
 
 All timestamps are stored as Firestore `Timestamp`. The client data-service
 serialises them to ISO-8601 strings for the React layer (`src/types`).
@@ -11,7 +11,7 @@ users/{uid}
   ├─ status:              'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
   ├─ business:            { businessName, ownerName, phone, taxId,
   │                         fertilizerLicenseNo, addressLine, city, state, pincode }
-  ├─ retailer?:           { creditLimit, outstandingBalance, priceTier,
+  ├─ retailer?:           { creditLimit, outstandingBalance,
   │                         licenseDocUrl, licenseFileName }
   ├─ createdAt:           Timestamp
   ├─ approvedAt?:         Timestamp
@@ -24,7 +24,7 @@ products/{productId}
   ├─ taxRatePct:          number   (GST %)
   ├─ basePrice:           number   (per unit, pre-tax)
   ├─ imageUrl?:           string
-  ├─ volumeTiers:         [{ minQty, discountPct }]
+  ├─ volumeTiers:         [{ minQty, discountPct }] (quantity-based pricing)
   ├─ totalStock:          number   (denormalised sum of batch quantities)
   ├─ lowStockThreshold:   number
   ├─ active:              boolean
@@ -37,6 +37,10 @@ products/{productId}
        ├─ expiryDate:     Timestamp
        ├─ mrp:            number
        └─ createdAt:      Timestamp
+
+inventory_categories/{categoryId}
+  ├─ name:                string
+  └─ gstRatePct:          number (default GST slab for new products)
 
 orders/{orderId}
   ├─ orderNumber:         string   (human-friendly, e.g. AGF-2026-000123)
@@ -87,6 +91,10 @@ rake_arrivals/{rakeId}
   └─ createdAt:           Timestamp
 ```
 
+Retailers do not have a Silver/Gold/Platinum account price tier. Account credit
+limits are managed individually; any product quantity-based savings are shown
+with the product and order price.
+
 ## Indexes (recommended composite)
 
 | Collection      | Fields                                   | Used by                        |
@@ -106,4 +114,8 @@ On approval, a Cloud Function sets the Auth custom claims:
 ```
 
 Staff/admins are provisioned with `{ "role": "staff", "staffFunction": "godown_worker" }`
-or `{ "role": "super_admin", "staffFunction": "super_admin" }`.
+or `{ "role": "staff", "staffFunction": "sales_executive" }`, and admins with
+`{ "role": "super_admin", "staffFunction": "super_admin" }`. Only super admins
+can review and approve submitted orders. Godown workers can move approved orders
+to packing and packed orders to out for delivery; they cannot approve, cancel, or
+mark orders delivered.

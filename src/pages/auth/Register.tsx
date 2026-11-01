@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   FileCheck2,
-  Sprout,
   TriangleAlert,
   Upload,
 } from 'lucide-react';
@@ -13,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
 import { useAuth } from '@/context/AuthContext';
 import type { BusinessInfo } from '@/types';
+import { BRAND_FULL_NAME } from '@/config/brand';
 
 const emptyBusiness: BusinessInfo = {
   businessName: '',
@@ -106,10 +106,8 @@ export function RegisterPage() {
       </Link>
 
       <div className="mb-6 flex items-center gap-2 lg:hidden">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-          <Sprout className="h-5 w-5" />
-        </span>
-        <span className="text-lg font-bold text-surface-900">AgriFlow B2B</span>
+        <img src="/balaji-logo.svg" alt="" className="h-10 w-10 rounded-xl" />
+        <span className="text-lg font-bold text-surface-900">{BRAND_FULL_NAME}</span>
       </div>
 
       <h2 className="text-2xl font-bold tracking-tight text-surface-900">

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, KeyRound, Sprout, TriangleAlert } from 'lucide-react';
+import { CheckCircle2, KeyRound, TriangleAlert } from 'lucide-react';
 import { AuthShell } from '@/components/layout/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
 import { useAuth } from '@/context/AuthContext';
+import { BRAND_FULL_NAME } from '@/config/brand';
 
 /**
  * "Set your password" screen reached from the approval email link.
@@ -66,10 +67,8 @@ export function SetPasswordPage() {
   return (
     <AuthShell>
       <div className="mb-6 flex items-center gap-2 lg:hidden">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-          <Sprout className="h-5 w-5" />
-        </span>
-        <span className="text-lg font-bold text-surface-900">AgriFlow B2B</span>
+        <img src="/balaji-logo.svg" alt="" className="h-10 w-10 rounded-xl" />
+        <span className="text-lg font-bold text-surface-900">{BRAND_FULL_NAME}</span>
       </div>
 
       <h2 className="text-2xl font-bold tracking-tight text-surface-900">

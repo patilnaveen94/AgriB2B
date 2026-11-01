@@ -1,5 +1,6 @@
 import type { SeedData } from '@/data/seed';
 import { buildSeedData } from '@/data/seed';
+import { DEFAULT_INVENTORY_CATEGORIES } from '@/types';
 
 /**
  * A tiny Firestore-shaped, localStorage-backed store that powers demo mode.
@@ -12,11 +13,63 @@ const STORAGE_KEY = 'agriflow.db.v4';
 
 type StoreShape = SeedData;
 
+function migrateLegacyStore(data: StoreShape): boolean {
+  let changed = false;
+
+  if (!Array.isArray(data.categories)) {
+    data.categories = DEFAULT_INVENTORY_CATEGORIES.map((category) => ({ ...category }));
+    changed = true;
+  }
+
+  for (const user of data.users) {
+    if (user.retailer && 'priceTier' in user.retailer) {
+      user.retailer = {
+        creditLimit: user.retailer.creditLimit,
+        outstandingBalance: user.retailer.outstandingBalance,
+        licenseDocUrl: user.retailer.licenseDocUrl,
+        licenseFileName: user.retailer.licenseFileName,
+      };
+      changed = true;
+    }
+
+    if (user.business.businessName === 'AgriFlow HQ') {
+      user.business.businessName = 'Shri Balaji Fertilizer';
+      user.business.addressLine = 'Mahalingpur';
+      user.business.city = 'Mahalingpur';
+      user.business.state = 'Karnataka';
+      user.business.pincode = '';
+      changed = true;
+    }
+  }
+
+  for (const announcement of data.announcements) {
+    if (announcement.body.includes('top volume tier')) {
+      announcement.body = announcement.body.replace(
+        'unlock the top volume tier',
+        'unlock additional quantity-based savings',
+      );
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 function load(): StoreShape {
   if (typeof window === 'undefined') return buildSeedData();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as StoreShape;
+    if (raw) {
+      const saved = JSON.parse(raw) as StoreShape;
+      if (migrateLegacyStore(saved)) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        } catch (error) {
+          console.error('Could not persist the demo data migration:', error);
+        }
+      }
+      return saved;
+    }
   } catch {
     /* fall through to seed */
   }

@@ -3,7 +3,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { RetailerRoute, StaffRoute } from '@/routes/ProtectedRoute';
+import { AdminOnlyRoute, RetailerRoute, StaffRoute } from '@/routes/ProtectedRoute';
 import { LoginPage } from '@/pages/auth/Login';
 import { RegisterPage } from '@/pages/auth/Register';
 import { SetPasswordPage } from '@/pages/auth/SetPassword';
@@ -17,6 +17,9 @@ import { OrderQueuePage } from '@/pages/admin/OrderQueue';
 import { InventoryPage } from '@/pages/admin/Inventory';
 import { SchemesPage } from '@/pages/admin/Schemes';
 import { ApprovalsPage } from '@/pages/admin/Approvals';
+import { AdminReportsPage } from '@/pages/admin/Reports';
+import { RetailerReportsPage } from '@/pages/retailer/Reports';
+import { PWAInstallProvider } from '@/context/PWAInstallContext';
 
 /**
  * Root application component. Providers are nested so that the cart can read
@@ -26,42 +29,48 @@ import { ApprovalsPage } from '@/pages/admin/Approvals';
  */
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <CartProvider>
-          <Routes>
-            {/* Public / auth */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/set-password" element={<SetPasswordPage />} />
+    <PWAInstallProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Routes>
+              {/* Public / auth */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/set-password" element={<SetPasswordPage />} />
 
-            {/* Retailer portal */}
-            <Route element={<RetailerRoute />}>
-              <Route path="/app" element={<AppLayout />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="catalog" element={<CatalogPage />} />
-                <Route path="rakes" element={<RakesPage />} />
-                <Route path="cart" element={<CartPage />} />
-                <Route path="orders" element={<OrdersPage />} />
+              {/* Retailer portal */}
+              <Route element={<RetailerRoute />}>
+                <Route path="/app" element={<AppLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="catalog" element={<CatalogPage />} />
+                  <Route path="rakes" element={<RakesPage />} />
+                  <Route path="cart" element={<CartPage />} />
+                  <Route path="orders" element={<OrdersPage />} />
+                  <Route path="reports" element={<RetailerReportsPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Staff / admin console */}
-            <Route element={<StaffRoute />}>
-              <Route path="/admin" element={<AppLayout />}>
-                <Route index element={<AnalyticsPage />} />
-                <Route path="orders" element={<OrderQueuePage />} />
-                <Route path="inventory" element={<InventoryPage />} />
-                <Route path="schemes" element={<SchemesPage />} />
-                <Route path="approvals" element={<ApprovalsPage />} />
+              {/* Staff / admin console */}
+              <Route element={<StaffRoute />}>
+                <Route path="/admin" element={<AppLayout />}>
+                  <Route index element={<AnalyticsPage />} />
+                  <Route path="orders" element={<OrderQueuePage />} />
+                  <Route path="inventory" element={<InventoryPage />} />
+                  <Route path="schemes" element={<SchemesPage />} />
+                  <Route element={<AdminOnlyRoute />}>
+                    <Route path="approvals" element={<ApprovalsPage />} />
+                  </Route>
+                  <Route path="reports" element={<AdminReportsPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </CartProvider>
-      </AuthProvider>
-    </ToastProvider>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </CartProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </PWAInstallProvider>
   );
 }

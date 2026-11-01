@@ -1,5 +1,5 @@
 /**
- * Domain model for the AgriFlow B2B wholesale distribution platform.
+ * Domain model for the Shri Balaji Fertilizer wholesale distribution platform.
  *
  * These types mirror the Firestore document shapes documented in
  * `docs/FIRESTORE_SCHEMA.md`. Timestamps are represented as ISO-8601 strings
@@ -33,13 +33,25 @@ export interface AuthClaims {
 // Product categories
 // ---------------------------------------------------------------------------
 
-export type ProductCategory = 'FERTILIZER' | 'PESTICIDE' | 'SEED';
+export type ProductCategory = string;
 
-export const PRODUCT_CATEGORIES: { value: ProductCategory; label: string }[] = [
-  { value: 'FERTILIZER', label: 'Fertilizer' },
-  { value: 'PESTICIDE', label: 'Pesticide' },
-  { value: 'SEED', label: 'Seed' },
+export interface InventoryCategory {
+  id: ProductCategory;
+  name: string;
+  gstRatePct: number;
+}
+
+export const DEFAULT_INVENTORY_CATEGORIES: InventoryCategory[] = [
+  { id: 'FERTILIZER', name: 'Fertilizer', gstRatePct: 5 },
+  { id: 'PESTICIDE', name: 'Pesticide', gstRatePct: 18 },
+  { id: 'SEED', name: 'Seed', gstRatePct: 5 },
 ];
+
+export const GST_RATE_SLABS: number[] = [0, 5, 12, 18, 28];
+
+export const PRODUCT_CATEGORIES = DEFAULT_INVENTORY_CATEGORIES.map(
+  ({ id, name }) => ({ value: id, label: name }),
+);
 
 // ---------------------------------------------------------------------------
 // Users
@@ -60,13 +72,9 @@ export interface BusinessInfo {
 export interface RetailerProfile {
   creditLimit: number;
   outstandingBalance: number;
-  /** Named price tier that maps to volume discount schedules. */
-  priceTier: PriceTier;
   licenseDocUrl?: string;
   licenseFileName?: string;
 }
-
-export type PriceTier = 'STANDARD' | 'SILVER' | 'GOLD' | 'PLATINUM';
 
 export interface AppUser {
   uid: string;

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Leaf, ShieldCheck, Sprout, TrendingUp } from 'lucide-react';
+import { Leaf, ShieldCheck, TrendingUp } from 'lucide-react';
+import { BRAND_FULL_NAME, BRAND_LOCATION, BRAND_NAME } from '@/config/brand';
 
 /** Split-screen shell used by all authentication screens. */
 export function AuthShell({ children }: { children: ReactNode }) {
@@ -16,12 +17,14 @@ export function AuthShell({ children }: { children: ReactNode }) {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-            <Sprout className="h-6 w-6" />
-          </span>
+          <img
+            src="/balaji-logo.svg"
+            alt=""
+            className="h-11 w-11 rounded-2xl"
+          />
           <div>
-            <p className="text-lg font-bold tracking-tight">AgriFlow B2B</p>
-            <p className="text-xs text-brand-200">Wholesale Distribution Platform</p>
+            <p className="text-lg font-bold tracking-tight">{BRAND_NAME}</p>
+            <p className="text-xs text-brand-200">{BRAND_LOCATION} · Wholesale supply</p>
           </div>
         </div>
 
@@ -30,7 +33,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             Fertilizers, pesticides & seeds — sourced, priced and delivered at scale.
           </h1>
           <p className="mt-4 text-brand-100">
-            Real-time batch stock, volume-tier pricing, credit management and rake
+            Real-time batch stock, transparent pricing, credit management and rake
             allocation, all in one distributor-grade portal.
           </p>
           <ul className="mt-8 space-y-3 text-sm">
@@ -50,7 +53,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </div>
 
         <p className="relative text-xs text-brand-200">
-          © {new Date().getFullYear()} AgriFlow. Built for agri-input distributors.
+          © {new Date().getFullYear()} {BRAND_FULL_NAME}.
         </p>
       </div>
 

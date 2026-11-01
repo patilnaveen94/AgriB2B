@@ -10,11 +10,18 @@
   html,
   body,
   #root {
-    height: 100%;
+    min-height: 100%;
+  }
+
+  html {
+    min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-surface-100 text-surface-800 font-sans antialiased;
+    min-height: 100dvh;
+    overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
   }
 

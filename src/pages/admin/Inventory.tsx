@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ImagePlus,
   Package,
   Pencil,
   Plus,
+  Search,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react';
@@ -15,15 +16,16 @@ import { InlineLoader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { Table, TableWrap, Td, Th, Tr } from '@/components/ui/Table';
-import { categoryMeta } from '@/components/ui/statusMeta';
+import { categoryMetaFor } from '@/components/ui/statusMeta';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { batchesApi, productsApi } from '@/services/api';
+import { batchesApi, inventoryCategoriesApi, productsApi } from '@/services/api';
 import {
-  PRODUCT_CATEGORIES,
   availableStock,
+  GST_RATE_SLABS,
   unitLabel,
   type Batch,
+  type InventoryCategory,
   type Product,
   type ProductCategory,
 } from '@/types';
@@ -88,14 +90,19 @@ const emptyProduct: ProductForm = {
 
 const UNIT_OPTIONS = ['Bag', 'Box', 'Bottle', 'Can', 'Drum', 'Packet', 'MT', 'Kg', 'L'];
 const MEASURE_OPTIONS = ['kg', 'g', 'L', 'ml', 'MT', 'unit'];
+type StockFilter = 'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 
 export function InventoryPage() {
   const { user } = useAuth();
   const toast = useToast();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<InventoryCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [batches, setBatches] = useState<Record<string, Batch[]>>({});
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [stockFilter, setStockFilter] = useState<StockFilter>('ALL');
 
   // Batch modal
   const [addingFor, setAddingFor] = useState<Product | null>(null);
@@ -109,6 +116,12 @@ export function InventoryPage() {
   const [savingProduct, setSavingProduct] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Category modal
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryGstRate, setCategoryGstRate] = useState('5');
+  const [savingCategory, setSavingCategory] = useState(false);
+
   // Stock adjust modal
   const [adjustFor, setAdjustFor] = useState<Product | null>(null);
   const [adjustQty, setAdjustQty] = useState('');
@@ -116,8 +129,12 @@ export function InventoryPage() {
   const [savingAdjust, setSavingAdjust] = useState(false);
 
   const load = async () => {
-    const list = await productsApi.list();
+    const [list, categoryList] = await Promise.all([
+      productsApi.list(),
+      inventoryCategoriesApi.list(),
+    ]);
     setProducts(list);
+    setCategories(categoryList);
     setLoading(false);
   };
 
@@ -129,6 +146,27 @@ export function InventoryPage() {
     () => products.filter((p) => availableStock(p) <= p.lowStockThreshold).length,
     [products],
   );
+
+  const filteredProducts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter((product) => {
+      const available = availableStock(product);
+      const matchesSearch =
+        !q ||
+        product.name.toLowerCase().includes(q) ||
+        product.brand.toLowerCase().includes(q);
+      const matchesCategory =
+        categoryFilter === 'ALL' || product.category === categoryFilter;
+      const matchesStock =
+        stockFilter === 'ALL' ||
+        (stockFilter === 'IN_STOCK' && available > 0) ||
+        (stockFilter === 'LOW_STOCK' &&
+          available > 0 &&
+          available <= product.lowStockThreshold) ||
+        (stockFilter === 'OUT_OF_STOCK' && available <= 0);
+      return matchesSearch && matchesCategory && matchesStock;
+    });
+  }, [products, search, categoryFilter, stockFilter]);
 
   const toggle = async (product: Product) => {
     if (expanded === product.id) {
@@ -198,8 +236,33 @@ export function InventoryPage() {
 
   const openCreateProduct = () => {
     setEditingId(null);
-    setProductForm(emptyProduct);
+    const initialCategory = categories[0];
+    setProductForm({
+      ...emptyProduct,
+      category: initialCategory?.id ?? emptyProduct.category,
+      taxRatePct: String(initialCategory?.gstRatePct ?? emptyProduct.taxRatePct),
+    });
     setProductModalOpen(true);
+  };
+
+  const saveCategory = async () => {
+    setSavingCategory(true);
+    try {
+      const category = await inventoryCategoriesApi.create({
+        name: categoryName,
+        gstRatePct: Number(categoryGstRate),
+      });
+      setCategories((current) => [...current, category]);
+      setCategoryFilter(category.id);
+      setCategoryName('');
+      setCategoryGstRate('5');
+      setCategoryModalOpen(false);
+      toast.success(`${category.name} category added.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add category.');
+    } finally {
+      setSavingCategory(false);
+    }
   };
 
   const openEditProduct = (p: Product) => {
@@ -314,12 +377,16 @@ export function InventoryPage() {
         title="Inventory & Batches"
         description="Manage products, units of measure, stock and batches."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {lowStockCount > 0 ? (
               <Badge tone="rose">{lowStockCount} low-stock SKUs</Badge>
             ) : (
               <Badge tone="emerald">All stock healthy</Badge>
             )}
+            <Button variant="outline" onClick={() => setCategoryModalOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add Category
+            </Button>
             <Button onClick={openCreateProduct}>
               <Plus className="h-4 w-4" />
               New Product
@@ -331,6 +398,136 @@ export function InventoryPage() {
       {loading ? (
         <InlineLoader label="Loading inventory…" />
       ) : (
+        <>
+        <div className="mb-4 grid grid-cols-1 gap-3 rounded-xl border border-surface-200 bg-white p-3 sm:grid-cols-3">
+          <Field label="Search products" htmlFor="inventory-search">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+              <Input
+                id="inventory-search"
+                className="pl-9"
+                placeholder="Product or brand"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </Field>
+          <Field label="Category" htmlFor="category-filter">
+            <Select
+              id="category-filter"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="ALL">All categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Stock status" htmlFor="stock-filter">
+            <Select
+              id="stock-filter"
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value as StockFilter)}
+            >
+              <option value="ALL">All stock</option>
+              <option value="IN_STOCK">In stock</option>
+              <option value="LOW_STOCK">Low stock</option>
+              <option value="OUT_OF_STOCK">Out of stock</option>
+            </Select>
+          </Field>
+        </div>
+
+        <div className="space-y-3 md:hidden">
+          {filteredProducts.map((p) => {
+            const available = availableStock(p);
+            const low = available <= p.lowStockThreshold;
+            const meta = categoryMetaFor(p.category);
+            return (
+              <Card key={p.id}>
+                <CardBody className="space-y-3 p-4">
+                  <button
+                    className="flex w-full items-center gap-3 text-left"
+                    onClick={() => toggle(p)}
+                  >
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="h-11 w-11 rounded-lg object-cover" />
+                    ) : (
+                      <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-100 text-surface-400">
+                        <Package className="h-5 w-5" />
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-surface-900">{p.name}</span>
+                      <span className="block truncate text-xs text-surface-500">{p.brand} · {unitLabel(p)}</span>
+                    </span>
+                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                  </button>
+                  <div className="grid grid-cols-3 gap-2 rounded-lg bg-surface-50 p-3 text-center">
+                    <div>
+                      <p className="text-[11px] text-surface-500">Available</p>
+                      <p className={low ? 'font-semibold text-rose-600' : 'font-semibold text-brand-700'}>
+                        {formatNumber(available)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-surface-500">Held</p>
+                      <p className="font-semibold text-amber-600">{formatNumber(p.heldStock)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-surface-500">Price incl. GST</p>
+                      <p className="font-semibold text-surface-800">
+                        {formatCurrency(grossUnit(p.basePrice, p.taxRatePct))}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-surface-500">GST {p.taxRatePct}% · Total {formatNumber(p.totalStock)}</span>
+                    <div className="flex items-center gap-1">
+                      <IconBtn label="Edit" onClick={() => openEditProduct(p)}>
+                        <Pencil className="h-4 w-4" />
+                      </IconBtn>
+                      <IconBtn label="Adjust stock" onClick={() => openAdjust(p)}>
+                        <SlidersHorizontal className="h-4 w-4" />
+                      </IconBtn>
+                      <IconBtn label="Add batch" onClick={() => openAddBatch(p)}>
+                        <Plus className="h-4 w-4" />
+                      </IconBtn>
+                      <IconBtn label="Delete" danger onClick={() => deleteProduct(p)}>
+                        <Trash2 className="h-4 w-4" />
+                      </IconBtn>
+                    </div>
+                  </div>
+                  {expanded === p.id && (
+                    <div className="border-t border-surface-100 pt-3">
+                      {!batches[p.id] ? (
+                        <p className="text-sm text-surface-400">Loading batches…</p>
+                      ) : batches[p.id].length === 0 ? (
+                        <p className="text-sm text-surface-400">No batches recorded.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {batches[p.id].map((batch) => (
+                            <div key={batch.id} className="flex justify-between gap-2 text-xs">
+                              <span className="font-medium">{batch.batchNumber}</span>
+                              <span className="text-surface-500">Qty {formatNumber(batch.quantity)} · Exp {formatDate(batch.expiryDate)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            );
+          })}
+          {filteredProducts.length === 0 && (
+            <p className="rounded-xl border border-dashed border-surface-300 p-6 text-center text-sm text-surface-500">
+              No products match these filters.
+            </p>
+          )}
+        </div>
+
+        <div className="hidden md:block">
         <Card>
           <CardBody className="p-0">
             <TableWrap>
@@ -347,13 +544,20 @@ export function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((p) => {
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-10 text-center text-sm text-surface-500">
+                        No products match these filters.
+                      </td>
+                    </tr>
+                  ) : filteredProducts.map((p) => {
                     const available = availableStock(p);
                     const low = available <= p.lowStockThreshold;
                     const isOpen = expanded === p.id;
+                    const meta = categoryMetaFor(p.category);
                     return (
-                      <>
-                        <Tr key={p.id}>
+                      <Fragment key={p.id}>
+                        <Tr>
                           <Td>
                             <button
                               className="flex items-center gap-3 text-left"
@@ -381,9 +585,7 @@ export function InventoryPage() {
                             </button>
                           </Td>
                           <Td>
-                            <Badge tone={categoryMeta[p.category].tone}>
-                              {categoryMeta[p.category].label}
-                            </Badge>
+                            <Badge tone={meta.tone}>{meta.label}</Badge>
                           </Td>
                           <Td className="text-right">
                             <span
@@ -465,7 +667,7 @@ export function InventoryPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -473,6 +675,8 @@ export function InventoryPage() {
             </TableWrap>
           </CardBody>
         </Card>
+        </div>
+        </>
       )}
 
       {/* Add batch modal */}
@@ -542,6 +746,46 @@ export function InventoryPage() {
         </div>
       </Modal>
 
+      <Modal
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        title="Add inventory category"
+        subtitle="Set the GST slab that will be suggested for products in this category."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCategoryModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={savingCategory} onClick={saveCategory}>
+              Save Category
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Category name" htmlFor="category-name" required>
+            <Input
+              id="category-name"
+              autoFocus
+              placeholder="e.g. Farm equipment"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+            />
+          </Field>
+          <Field label="GST slab" htmlFor="category-gst" required>
+            <Select
+              id="category-gst"
+              value={categoryGstRate}
+              onChange={(e) => setCategoryGstRate(e.target.value)}
+            >
+              {GST_RATE_SLABS.map((rate) => (
+                <option key={rate} value={rate}>{rate}%</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+      </Modal>
+
       {/* Product create/edit modal */}
       <Modal
         open={productModalOpen}
@@ -604,7 +848,7 @@ export function InventoryPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Product name" htmlFor="pn" required>
               <Input
                 id="pn"
@@ -625,16 +869,18 @@ export function InventoryPage() {
               <Select
                 id="pc"
                 value={productForm.category}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const category = categories.find((item) => item.id === e.target.value);
                   setProductForm({
                     ...productForm,
                     category: e.target.value as ProductCategory,
-                  })
-                }
+                    taxRatePct: String(category?.gstRatePct ?? productForm.taxRatePct),
+                  });
+                }}
               >
-                {PRODUCT_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name} · default GST {category.gstRatePct}%
                   </option>
                 ))}
               </Select>
@@ -653,7 +899,7 @@ export function InventoryPage() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-surface-500">
               Unit of measure
             </p>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Sale unit" htmlFor="su" required>
                 <Input
                   id="su"
@@ -731,16 +977,21 @@ export function InventoryPage() {
                 onChange={(e) => setProductForm({ ...productForm, basePrice: e.target.value })}
               />
             </Field>
-            <Field label="GST %" htmlFor="pt">
-              <Input
+            <Field label="GST slab" htmlFor="pt" hint="Suggested from the selected category; adjust when needed.">
+              <Select
                 id="pt"
-                type="number"
-                min={0}
                 value={productForm.taxRatePct}
                 onChange={(e) =>
                   setProductForm({ ...productForm, taxRatePct: e.target.value })
                 }
-              />
+              >
+                {GST_RATE_SLABS.map((rate) => (
+                  <option key={rate} value={rate}>{rate}%</option>
+                ))}
+                {!GST_RATE_SLABS.includes(Number(productForm.taxRatePct)) && (
+                  <option value={productForm.taxRatePct}>{productForm.taxRatePct}% (existing)</option>
+                )}
+              </Select>
             </Field>
             <Field label="Order step" htmlFor="pstep">
               <Input

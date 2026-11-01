@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogIn, Sprout, TriangleAlert } from 'lucide-react';
+import { LogIn, TriangleAlert } from 'lucide-react';
 import { AuthShell } from '@/components/layout/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
 import { useAuth } from '@/context/AuthContext';
 import { DEMO_LOGINS, DEMO_PASSWORD } from '@/data/seed';
 import { DEMO_MODE } from '@/lib/firebase';
+import { BRAND_FULL_NAME } from '@/config/brand';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -44,10 +45,8 @@ export function LoginPage() {
   return (
     <AuthShell>
       <div className="mb-8 flex items-center gap-2 lg:hidden">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-          <Sprout className="h-5 w-5" />
-        </span>
-        <span className="text-lg font-bold text-surface-900">AgriFlow B2B</span>
+        <img src="/balaji-logo.svg" alt="" className="h-10 w-10 rounded-xl" />
+        <span className="text-lg font-bold text-surface-900">{BRAND_FULL_NAME}</span>
       </div>
 
       <h2 className="text-2xl font-bold tracking-tight text-surface-900">Welcome back</h2>

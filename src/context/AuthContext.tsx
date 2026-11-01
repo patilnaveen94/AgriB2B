@@ -127,7 +127,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       retailer: {
         creditLimit: 0,
         outstandingBalance: 0,
-        priceTier: 'STANDARD',
         licenseFileName: input.licenseFileName,
       },
       createdAt: nowIso(),

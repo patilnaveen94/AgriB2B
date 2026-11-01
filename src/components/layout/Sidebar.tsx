@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Sprout, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { navFor } from './navConfig';
 import { useAuth } from '@/context/AuthContext';
 import { cx } from '@/lib/utils';
 import { staffFunctionLabel } from '@/components/ui/statusMeta';
+import { BRAND_FULL_NAME } from '@/config/brand';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -28,13 +29,15 @@ export function Sidebar({ collapsed, mobileOpen, onCloseMobile }: SidebarProps) 
     <div className="flex h-full flex-col bg-surface-900 text-surface-100">
       {/* Brand */}
       <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white">
-          <Sprout className="h-5 w-5" />
-        </span>
+        <img
+          src="/balaji-logo.svg"
+          alt=""
+          className="h-9 w-9 shrink-0 rounded-xl"
+        />
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight text-white">
-              AgriFlow B2B
+            <p className="line-clamp-2 text-sm font-bold leading-4 tracking-tight text-white">
+              {BRAND_FULL_NAME}
             </p>
             <p className="truncate text-[11px] font-medium text-brand-300">{roleLabel}</p>
           </div>

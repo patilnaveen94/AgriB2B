@@ -15,7 +15,10 @@ export function BottomNav() {
   if (!user || !role) return null;
 
   // Flatten the role's nav sections into a single tab row.
-  const items = navFor(role).flatMap((s) => s.items);
+  const allItems = navFor(role).flatMap((s) => s.items);
+  const items = allItems
+    .filter((item) => item.to !== '/app/rakes')
+    .sort((a, b) => Number(a.to === '/app/cart') - Number(b.to === '/app/cart'));
 
   return (
     <nav

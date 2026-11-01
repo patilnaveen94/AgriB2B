@@ -4,14 +4,14 @@ import type {
   Batch,
   CreditLedgerEntry,
   InventoryLog,
+  InventoryCategory,
   Order,
   OrderLineItem,
   OrderStatus,
-  PriceTier,
   Product,
   RakeArrival,
 } from '@/types';
-import { ACTIVE_APPROVED_STATUSES, orderPriorityWeight } from '@/types';
+import { ACTIVE_APPROVED_STATUSES, GST_RATE_SLABS, orderPriorityWeight } from '@/types';
 import { mockStore } from './mockStore';
 import { delay, genId, nowIso, round2 } from '@/lib/utils';
 
@@ -56,7 +56,7 @@ export const usersApi = {
   },
   async approve(
     uid: string,
-    opts: { creditLimit: number; priceTier: PriceTier; approvedBy: string },
+    opts: { creditLimit: number; approvedBy: string },
   ): Promise<AppUser> {
     const u = mockStore.data.users.find((x) => x.uid === uid);
     if (!u) throw new Error('User not found');
@@ -66,10 +66,10 @@ export const usersApi = {
     u.retailer = {
       creditLimit: opts.creditLimit,
       outstandingBalance: u.retailer?.outstandingBalance ?? 0,
-      priceTier: opts.priceTier,
       licenseDocUrl: u.retailer?.licenseDocUrl,
       licenseFileName: u.retailer?.licenseFileName,
     };
+
     mockStore.save();
     return delay(clone(u));
   },
@@ -91,6 +91,44 @@ export const usersApi = {
     u.retailer = { ...u.retailer, ...patch };
     mockStore.save();
     return delay(clone(u));
+  },
+};
+
+export const inventoryCategoriesApi = {
+  async list(): Promise<InventoryCategory[]> {
+    return delay(clone(mockStore.data.categories));
+  },
+  async create(input: Omit<InventoryCategory, 'id'>): Promise<InventoryCategory> {
+    const name = input.name.trim();
+    if (!name) throw new Error('Category name is required.');
+    if (!GST_RATE_SLABS.includes(input.gstRatePct)) {
+      throw new Error('Enter a valid GST slab.');
+    }
+    if (
+      mockStore.data.categories.some(
+        (category) => category.name.toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      throw new Error('A category with this name already exists.');
+    }
+    const slug = name
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase();
+    const baseId = slug || 'CATEGORY';
+    const id = mockStore.data.categories.some((category) => category.id === baseId)
+      ? `${baseId}_${genId('cat').slice(4)}`
+      : baseId;
+    const category: InventoryCategory = {
+      id,
+      name,
+      gstRatePct: input.gstRatePct,
+    };
+    mockStore.data.categories.push(category);
+    mockStore.save();
+    return delay(clone(category));
   },
 };
 
@@ -342,6 +380,10 @@ export const ordersApi = {
       by: string;
     },
   ): Promise<Order> {
+    const approver = mockStore.data.users.find((user) => user.uid === input.by);
+    if (approver?.role !== 'super_admin') {
+      throw new Error('Only the super admin can review and approve orders.');
+    }
     const o = mockStore.data.orders.find((x) => x.id === id);
     if (!o) throw new Error('Order not found');
 
@@ -379,9 +421,31 @@ export const ordersApi = {
     by: string,
     note?: string,
   ): Promise<Order> {
+    const actor = mockStore.data.users.find((user) => user.uid === by);
+    if (
+      actor?.role === 'staff' &&
+      actor.staffFunction === 'godown_worker' &&
+      status !== 'PACKING' &&
+      status !== 'OUT_FOR_DELIVERY'
+    ) {
+      throw new Error('Godown workers can only pack and dispatch approved orders.');
+    }
     const o = mockStore.data.orders.find((x) => x.id === id);
     if (!o) throw new Error('Order not found');
     const prev = o.status;
+    if (actor?.role === 'staff' && status === 'QUANTITY_APPROVED') {
+      throw new Error('Only the super admin can review and approve orders.');
+    }
+    if (
+      actor?.role === 'staff' &&
+      actor.staffFunction === 'godown_worker' &&
+      !(
+        (prev === 'QUANTITY_APPROVED' && status === 'PACKING') ||
+        (prev === 'PACKING' && status === 'OUT_FOR_DELIVERY')
+      )
+    ) {
+      throw new Error('Godown workers can only pack approved orders and dispatch packed orders.');
+    }
     const wasHeld = ACTIVE_APPROVED_STATUSES.includes(prev);
 
     o.status = status;

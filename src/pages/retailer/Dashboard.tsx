@@ -13,11 +13,12 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineLoader } from '@/components/ui/Loader';
-import { orderStatusMeta, priceTierMeta } from '@/components/ui/statusMeta';
+import { orderStatusMeta } from '@/components/ui/statusMeta';
 import { useAuth } from '@/context/AuthContext';
 import { announcementsApi, ordersApi } from '@/services/api';
 import { ORDER_PIPELINE, type Announcement, type Order } from '@/types';
 import { cx, formatCurrency, formatDate } from '@/lib/utils';
+import { BRAND_FULL_NAME, BRAND_NAME } from '@/config/brand';
 
 const ACTIVE_STATUSES: Order['status'][] = [
   'SUBMITTED',
@@ -60,7 +61,6 @@ export function DashboardPage() {
   const outstanding = retailer?.outstandingBalance ?? 0;
   const available = Math.max(0, limit - outstanding);
   const utilization = limit > 0 ? Math.min(100, Math.round((outstanding / limit) * 100)) : 0;
-  const tier = retailer?.priceTier ?? 'STANDARD';
 
   const pending = orders.filter((o) => o.status === 'SUBMITTED').length;
   const inTransit = orders.filter((o) => o.status === 'OUT_FOR_DELIVERY').length;
@@ -82,8 +82,8 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* Hero with credit meter */}
-      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 p-5 text-white shadow-card">
+      {/* Personal welcome and credit summary */}
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-800 via-brand-700 to-brand-500 p-5 text-white shadow-card">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-medium text-brand-100">{greeting}</p>
@@ -93,11 +93,15 @@ export function DashboardPage() {
             <p className="mt-0.5 truncate text-sm text-brand-100/90">
               {user?.business.businessName} · {user?.business.city}
             </p>
+            <p className="mt-3 text-sm font-medium leading-6 text-white">
+              Welcome to {BRAND_FULL_NAME}, {user?.business.ownerName}. Thank you for
+              choosing us — we’re here to help your business grow.
+            </p>
           </div>
-          <span className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
-            {priceTierMeta[tier].label} Tier
-          </span>
         </div>
+        <p className="mt-3 text-xs font-semibold text-brand-100">
+          With regards, {BRAND_NAME}
+        </p>
 
         <div className="mt-4 rounded-xl bg-white/10 p-4 backdrop-blur">
           <div className="flex items-center justify-between text-xs text-brand-100">

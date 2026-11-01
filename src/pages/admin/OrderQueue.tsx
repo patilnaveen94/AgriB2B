@@ -70,6 +70,9 @@ function initials(name: string): string {
 
 export function OrderQueuePage() {
   const { user } = useAuth();
+  const canApproveOrders = user?.role === 'super_admin';
+  const isGodownWorker =
+    user?.role === 'staff' && user.staffFunction === 'godown_worker';
   const toast = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -400,7 +403,7 @@ export function OrderQueuePage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {isNew && (
+                      {isNew && canApproveOrders && (
                         <>
                           <Button size="sm" onClick={() => openReview(o)}>
                             <PackageCheck className="h-4 w-4" />
@@ -416,13 +419,22 @@ export function OrderQueuePage() {
                           </Button>
                         </>
                       )}
-                      {isPriority && next && (
+                      {isNew && !canApproveOrders && (
+                        <span className="self-center text-xs text-surface-500">
+                          Awaiting super-admin review
+                        </span>
+                      )}
+                      {isPriority &&
+                        next &&
+                        (!isGodownWorker ||
+                          next === 'PACKING' ||
+                          next === 'OUT_FOR_DELIVERY') && (
                         <>
                           <Button size="sm" loading={isBusy} onClick={() => updateStatus(o, next)}>
                             <PackageCheck className="h-4 w-4" />
                             Move to {orderStatusMeta[next].label}
                           </Button>
-                          {next !== 'DELIVERED' && (
+                          {!isGodownWorker && next !== 'DELIVERED' && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -434,7 +446,7 @@ export function OrderQueuePage() {
                           )}
                         </>
                       )}
-                      {(isNew || isPriority) && (
+                      {!isGodownWorker && (isNew || isPriority) && (
                         <Button
                           size="sm"
                           variant="ghost"

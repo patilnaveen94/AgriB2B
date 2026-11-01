@@ -8,13 +8,18 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineLoader } from '@/components/ui/Loader';
 import { Modal } from '@/components/ui/Modal';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
-import { categoryMeta, rakeStatusMeta } from '@/components/ui/statusMeta';
+import { categoryMetaFor, rakeStatusMeta } from '@/components/ui/statusMeta';
 import { useToast } from '@/components/ui/Toast';
-import { announcementsApi, productsApi, rakesApi } from '@/services/api';
 import {
-  PRODUCT_CATEGORIES,
+  announcementsApi,
+  inventoryCategoriesApi,
+  productsApi,
+  rakesApi,
+} from '@/services/api';
+import {
   type Announcement,
   type AnnouncementType,
+  type InventoryCategory,
   type Product,
   type ProductCategory,
   type RakeArrival,
@@ -44,6 +49,7 @@ export function SchemesPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [rakes, setRakes] = useState<RakeArrival[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<InventoryCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Announcement modal
@@ -69,14 +75,16 @@ export function SchemesPage() {
   const [rakeItems, setRakeItems] = useState<RakeItemForm[]>([{ ...blankItem }]);
 
   const load = async () => {
-    const [a, r, p] = await Promise.all([
+    const [a, r, p, c] = await Promise.all([
       announcementsApi.list(),
       rakesApi.list(),
       productsApi.list(),
+      inventoryCategoriesApi.list(),
     ]);
     setAnnouncements(a);
     setRakes(r);
     setProducts(p);
+    setCategories(c);
     setLoading(false);
   };
 
@@ -241,8 +249,8 @@ export function SchemesPage() {
                       <div className="flex items-center gap-2">
                         <Badge tone={a.type === 'SCHEME' ? 'brand' : 'sky'}>{a.type}</Badge>
                         {a.category && (
-                          <Badge tone={categoryMeta[a.category].tone}>
-                            {categoryMeta[a.category].label}
+                          <Badge tone={categoryMetaFor(a.category).tone}>
+                            {categoryMetaFor(a.category).label}
                           </Badge>
                         )}
                       </div>
@@ -366,9 +374,9 @@ export function SchemesPage() {
                   setAnnForm({ ...annForm, category: e.target.value as ProductCategory })
                 }
               >
-                {PRODUCT_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </Select>
