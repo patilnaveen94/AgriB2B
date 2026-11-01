@@ -458,7 +458,7 @@ export function InventoryPage() {
                       </span>
                     )}
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-surface-900">{p.name}</span>
+                      <span className="block break-words font-semibold leading-snug text-surface-900">{p.name}</span>
                       <span className="block truncate text-xs text-surface-500">{p.brand} · {unitLabel(p)}</span>
                     </span>
                     <Badge tone={meta.tone}>{meta.label}</Badge>

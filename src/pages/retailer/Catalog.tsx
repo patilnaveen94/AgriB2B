@@ -151,7 +151,7 @@ export function CatalogPage() {
                 <p className="text-[11px] font-medium uppercase tracking-wide text-surface-400">
                   {p.brand}
                 </p>
-                <h3 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-surface-900">
+                <h3 className="mt-0.5 break-words text-sm font-semibold leading-snug text-surface-900">
                   {p.name}
                 </h3>
                 <p className="mt-1 text-[11px] text-surface-400">{unitLabel(p)}</p>

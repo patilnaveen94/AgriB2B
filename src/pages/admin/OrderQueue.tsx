@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Banknote,
+  CalendarDays,
   ClipboardList,
   Flame,
   Package,
@@ -28,7 +30,7 @@ import {
   type Order,
   type OrderStatus,
 } from '@/types';
-import { cx, formatCurrency, formatDate, isoInDays } from '@/lib/utils';
+import { cx, formatCurrency, formatDate, isoInDays, localDateKey } from '@/lib/utils';
 
 type FilterKey = OrderStatus | 'ALL';
 
@@ -103,13 +105,19 @@ export function OrderQueuePage() {
   }, [orders]);
 
   const kpis = useMemo(() => {
-    const isPending = (o: Order) =>
+    const isOpen = (o: Order) =>
       o.status !== 'DELIVERED' && o.status !== 'REJECTED' && o.status !== 'CANCELLED';
+    const today = localDateKey(new Date().toISOString());
+    const openOrders = orders.filter(isOpen);
     return {
-      newCount: orders.filter((o) => o.status === 'SUBMITTED').length,
+      todayOrders: orders.filter((o) => localDateKey(o.createdAt) === today).length,
+      dueToday: openOrders.filter((o) => o.expectedDeliveryDate?.slice(0, 10) === today).length,
+      awaitingApproval: orders.filter((o) => o.status === 'SUBMITTED').length,
+      overdue: openOrders.filter(
+        (o) => !!o.expectedDeliveryDate && o.expectedDeliveryDate.slice(0, 10) < today,
+      ).length,
       inProgress: orders.filter((o) => ACTIVE_APPROVED_STATUSES.includes(o.status)).length,
-      delivered: orders.filter((o) => o.status === 'DELIVERED').length,
-      pendingValue: orders.filter(isPending).reduce((s, o) => s + o.grandTotal, 0),
+      pendingValue: openOrders.reduce((s, o) => s + o.grandTotal, 0),
     };
   }, [orders]);
 
@@ -216,35 +224,49 @@ export function OrderQueuePage() {
         description="Process orders end to end — approve, fulfil and track delivery."
       />
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {/* Daily workload and fulfilment overview */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 2xl:grid-cols-6">
         <StatTile
-          label="New orders"
-          value={kpis.newCount}
+          label="Today's orders"
+          value={kpis.todayOrders}
+          tone="sky"
+          icon={<CalendarDays className="h-5 w-5" />}
+          hint="Placed today"
+        />
+        <StatTile
+          label="Due for delivery today"
+          value={kpis.dueToday}
+          tone="brand"
+          icon={<Truck className="h-5 w-5" />}
+          hint="Open orders with today's ETA"
+        />
+        <StatTile
+          label="Awaiting approval"
+          value={kpis.awaitingApproval}
           tone="amber"
           icon={<ClipboardList className="h-5 w-5" />}
-          hint="Awaiting approval"
+          hint="New orders to review"
         />
         <StatTile
-          label="In progress"
+          label="Overdue deliveries"
+          value={kpis.overdue}
+          tone="rose"
+          icon={<AlertTriangle className="h-5 w-5" />}
+          hint="Past ETA and still open"
+        />
+        <StatTile
+          label="In fulfilment"
           value={kpis.inProgress}
-          tone="sky"
-          icon={<Package className="h-5 w-5" />}
-          hint="Approved → out for delivery"
-        />
-        <StatTile
-          label="Delivered"
-          value={kpis.delivered}
-          tone="brand"
-          icon={<PackageCheck className="h-5 w-5" />}
-          hint="Completed orders"
-        />
-        <StatTile
-          label="Pending value"
-          value={formatCurrency(kpis.pendingValue)}
           tone="violet"
+          icon={<PackageCheck className="h-5 w-5" />}
+          hint="Approved through delivery"
+        />
+        <StatTile
+          label="Open order value"
+          value={formatCurrency(kpis.pendingValue)}
+          tone="brand"
           icon={<Wallet className="h-5 w-5" />}
-          hint="Yet to fulfil"
+          hint="Not yet completed"
         />
       </div>
 
@@ -377,14 +399,16 @@ export function OrderQueuePage() {
                     {o.items.map((item) => (
                       <div
                         key={item.productId}
-                        className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                        className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-3 py-2.5 text-sm"
                       >
-                        <span className="min-w-0 truncate font-medium text-surface-800">
+                        <span className="min-w-0 break-words font-medium leading-snug text-surface-800">
                           {item.name}
                         </span>
-                        <span className="shrink-0 text-xs text-surface-500">
-                          {item.approvedQty} {item.unit} ·{' '}
-                          <span className="font-semibold text-surface-700">
+                        <span className="shrink-0 text-right text-xs leading-snug text-surface-500">
+                          <span className="block whitespace-nowrap">
+                            {item.approvedQty} {item.unit}
+                          </span>
+                          <span className="block whitespace-nowrap font-semibold text-surface-700">
                             {formatCurrency(item.lineTotal + item.taxAmount)}
                           </span>
                         </span>
@@ -470,6 +494,7 @@ export function OrderQueuePage() {
       <Modal
         open={!!reviewing}
         onClose={() => setReviewing(null)}
+        size="lg"
         title={`Approve ${reviewing?.orderNumber ?? ''}`}
         subtitle="Confirm quantities, add freight and set the promised delivery date."
         footer={
@@ -483,23 +508,28 @@ export function OrderQueuePage() {
           </>
         }
       >
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-surface-500">
               Approved quantities
             </p>
             {reviewing?.items.map((item) => (
-              <div key={item.productId} className="flex items-center justify-between gap-3">
+              <div
+                key={item.productId}
+                className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,7rem)] items-center gap-3"
+              >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-surface-800">{item.name}</p>
-                  <p className="text-xs text-surface-400">
+                  <p className="break-words text-sm font-medium leading-snug text-surface-800">
+                    {item.name}
+                  </p>
+                  <p className="mt-0.5 break-words text-xs text-surface-400">
                     Requested {item.requestedQty} {item.unit}
                   </p>
                 </div>
                 <Input
                   type="number"
                   min={0}
-                  className="w-24"
+                  className="w-full"
                   value={approvals[item.productId] ?? item.approvedQty}
                   onChange={(e) =>
                     setApprovals((s) => ({
@@ -512,7 +542,7 @@ export function OrderQueuePage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-4 border-t border-surface-100 pt-4">
+          <div className="grid grid-cols-1 gap-3 border-t border-surface-100 pt-4 sm:grid-cols-2 sm:gap-4">
             <Field label="Freight charges (₹)" htmlFor="freight">
               <Input
                 id="freight"
@@ -532,9 +562,13 @@ export function OrderQueuePage() {
             </Field>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg bg-surface-50 px-4 py-3 text-sm">
-            <span className="font-medium text-surface-600">Estimated total (incl. freight)</span>
-            <span className="font-bold text-surface-900">{formatCurrency(estimatedTotal)}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-50 px-4 py-3 text-sm">
+            <span className="min-w-0 flex-1 font-medium text-surface-600">
+              Estimated total (incl. freight)
+            </span>
+            <span className="shrink-0 font-bold text-surface-900">
+              {formatCurrency(estimatedTotal)}
+            </span>
           </div>
         </div>
       </Modal>
@@ -542,12 +576,13 @@ export function OrderQueuePage() {
   );
 }
 
-type Tone = 'brand' | 'sky' | 'amber' | 'violet';
+type Tone = 'brand' | 'sky' | 'amber' | 'violet' | 'rose';
 const TILE_TONES: Record<Tone, string> = {
   brand: 'bg-brand-50 text-brand-600',
   sky: 'bg-sky-50 text-sky-600',
   amber: 'bg-amber-50 text-amber-600',
   violet: 'bg-violet-50 text-violet-600',
+  rose: 'bg-rose-50 text-rose-600',
 };
 
 function StatTile({
@@ -565,13 +600,13 @@ function StatTile({
 }) {
   return (
     <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-card">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-surface-500">{label}</p>
-        <span className={cx('flex h-8 w-8 items-center justify-center rounded-lg', TILE_TONES[tone])}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 break-words text-xs font-medium text-surface-500">{label}</p>
+        <span className={cx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', TILE_TONES[tone])}>
           {icon}
         </span>
       </div>
-      <p className="mt-2 text-xl font-bold tracking-tight text-surface-900 sm:text-2xl">{value}</p>
+      <p className="mt-2 break-words text-xl font-bold tracking-tight text-surface-900 sm:text-2xl">{value}</p>
       {hint && <p className="mt-0.5 text-[11px] text-surface-400">{hint}</p>}
     </div>
   );

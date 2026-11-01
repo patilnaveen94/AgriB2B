@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, CheckCircle2, ClipboardList, Package, Truck } from 'lucide-react';
+import {
+  Ban,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  Package,
+  PackageCheck,
+  Truck,
+} from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -12,7 +21,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { ordersApi } from '@/services/api';
 import { ORDER_PIPELINE, type Order } from '@/types';
-import { cx, formatCurrency, formatDate } from '@/lib/utils';
+import { cx, formatCurrency, formatDate, localDateKey } from '@/lib/utils';
 
 type FilterKey = 'ALL' | 'ACTIVE' | 'DELIVERED' | 'CLOSED';
 
@@ -109,6 +118,20 @@ export function OrdersPage() {
     [orders],
   );
 
+  const dailySummary = useMemo(() => {
+    const today = localDateKey(new Date().toISOString());
+    return {
+      todayOrders: orders.filter((o) => localDateKey(o.createdAt) === today).length,
+      dueToday: orders.filter(
+        (o) =>
+          ACTIVE_SET.includes(o.status) &&
+          o.expectedDeliveryDate?.slice(0, 10) === today,
+      ).length,
+      awaitingApproval: orders.filter((o) => o.status === 'SUBMITTED').length,
+      active: orders.filter((o) => ACTIVE_SET.includes(o.status)).length,
+    };
+  }, [orders]);
+
   const filtered = orders.filter((o) => inFilter(o, filter));
 
   const chips: { key: FilterKey; label: string }[] = [
@@ -124,6 +147,39 @@ export function OrdersPage() {
         title="Order Tracker"
         description="Follow every order from placement to delivery."
       />
+
+      {!loading && orders.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <StatCard
+            label="Orders today"
+            value={dailySummary.todayOrders}
+            icon={<CalendarDays className="h-5 w-5" />}
+            tone="sky"
+            hint="Placed today"
+          />
+          <StatCard
+            label="Deliveries due today"
+            value={dailySummary.dueToday}
+            icon={<Truck className="h-5 w-5" />}
+            tone="brand"
+            hint="Based on expected delivery date"
+          />
+          <StatCard
+            label="Awaiting approval"
+            value={dailySummary.awaitingApproval}
+            icon={<ClipboardList className="h-5 w-5" />}
+            tone="amber"
+            hint="Being reviewed by the wholesaler"
+          />
+          <StatCard
+            label="Active orders"
+            value={dailySummary.active}
+            icon={<PackageCheck className="h-5 w-5" />}
+            tone="violet"
+            hint="Not yet delivered or closed"
+          />
+        </div>
+      )}
 
       {/* Filter chips */}
       {!loading && orders.length > 0 && (
@@ -206,20 +262,22 @@ export function OrdersPage() {
                     {o.items.map((item) => (
                       <div
                         key={item.productId}
-                        className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                        className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-3 py-2.5 text-sm"
                       >
                         <div className="min-w-0">
-                          <span className="font-medium text-surface-800">{item.name}</span>
-                          <span className="ml-2 text-xs text-surface-400">
+                          <p className="break-words font-medium leading-snug text-surface-800">
+                            {item.name}
+                          </p>
+                          <p className="mt-0.5 break-words text-xs text-surface-400">
                             {item.approvedQty} {item.unit}
                             {item.approvedQty !== item.requestedQty && (
                               <span className="ml-1 text-amber-600">
                                 (req {item.requestedQty})
                               </span>
                             )}
-                          </span>
+                          </p>
                         </div>
-                        <span className="shrink-0 font-medium text-surface-700">
+                        <span className="shrink-0 whitespace-nowrap text-right font-medium text-surface-700">
                           {formatCurrency(item.lineTotal + item.taxAmount)}
                         </span>
                       </div>
