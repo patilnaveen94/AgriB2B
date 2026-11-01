@@ -1,6 +1,7 @@
 import type {
   Announcement,
   AppUser,
+  AppNotification,
   Batch,
   CreditLedgerEntry,
   InventoryLog,
@@ -90,6 +91,7 @@ export interface SeedData {
   ledgers: CreditLedgerEntry[];
   inventoryLogs: InventoryLog[];
   categories: InventoryCategory[];
+  notifications: AppNotification[];
 }
 
 // --- Users ------------------------------------------------------------------
@@ -1063,6 +1065,7 @@ export function buildSeedData(): SeedData {
     ledgers,
     inventoryLogs,
     categories: DEFAULT_INVENTORY_CATEGORIES.map((category) => ({ ...category })),
+    notifications: [],
   };
 }
 

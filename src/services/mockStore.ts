@@ -21,6 +21,11 @@ function migrateLegacyStore(data: StoreShape): boolean {
     changed = true;
   }
 
+  if (!Array.isArray(data.notifications)) {
+    data.notifications = [];
+    changed = true;
+  }
+
   for (const user of data.users) {
     if (user.retailer && 'priceTier' in user.retailer) {
       user.retailer = {
@@ -91,6 +96,7 @@ function persist(next: StoreShape = store): void {
   store = next;
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    window.dispatchEvent(new Event('agriflow:store-updated'));
   }
 }
 
@@ -99,6 +105,16 @@ export const mockStore = {
     return store;
   },
   save: () => persist(),
+  refresh(): void {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw) as StoreShape;
+    if (migrateLegacyStore(saved)) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    }
+    store = saved;
+  },
   /** Wipe local state and re-seed. Useful for demos and tests. */
   reset(): StoreShape {
     const seeded = buildSeedData();

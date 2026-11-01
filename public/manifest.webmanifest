@@ -3,7 +3,7 @@
   "name": "Shri Balaji Fertilizer, Mahalingpur",
   "short_name": "Shri Balaji",
   "description": "Wholesale ordering from Shri Balaji Fertilizer, Mahalingpur.",
-  "start_url": "/login",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f1f5f9",

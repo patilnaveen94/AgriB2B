@@ -1,5 +1,6 @@
 import type {
   Announcement,
+  AppNotification,
   AppUser,
   Batch,
   CreditLedgerEntry,
@@ -129,6 +130,100 @@ export const inventoryCategoriesApi = {
     mockStore.data.categories.push(category);
     mockStore.save();
     return delay(clone(category));
+  },
+};
+
+function notifyOrderStakeholders(
+  order: Order,
+  type: AppNotification['type'],
+  actorId?: string,
+): void {
+  const isNewOrder = type === 'ORDER_SUBMITTED';
+  const recipients = mockStore.data.users.filter((user) => {
+    if (user.uid === actorId) return false;
+    if (isNewOrder) return user.role === 'super_admin';
+    return (
+      user.role === 'super_admin' ||
+      user.role === 'staff' ||
+      (user.role === 'retailer' && user.uid === order.retailerId)
+    );
+  });
+  const title =
+    type === 'ORDER_SUBMITTED'
+      ? 'New order awaiting review'
+      : type === 'ORDER_APPROVED'
+        ? 'Order approved'
+        : `Order ${orderStatusMetaLabel(order.status)}`;
+  const message =
+    type === 'ORDER_SUBMITTED'
+      ? `${order.retailerName} placed ${order.orderNumber}.`
+      : type === 'ORDER_APPROVED'
+        ? `${order.orderNumber} has been approved and is moving to fulfillment.`
+        : `${order.orderNumber} is now ${orderStatusMetaLabel(order.status).toLowerCase()}.`;
+  for (const recipient of recipients) {
+    mockStore.data.notifications.push({
+      id: genId('notification'),
+      recipientId: recipient.uid,
+      type,
+      title,
+      message,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      href:
+        recipient.role === 'retailer'
+          ? `/app/orders?order=${encodeURIComponent(order.id)}`
+          : `/admin/orders?order=${encodeURIComponent(order.id)}`,
+      createdAt: nowIso(),
+    });
+  }
+}
+
+function orderStatusMetaLabel(status: OrderStatus): string {
+  const labels: Record<OrderStatus, string> = {
+    SUBMITTED: 'submitted',
+    QUANTITY_APPROVED: 'approved',
+    PACKING: 'packing',
+    OUT_FOR_DELIVERY: 'out for delivery',
+    DELIVERED: 'delivered',
+    REJECTED: 'rejected',
+    CANCELLED: 'cancelled',
+  };
+  return labels[status];
+}
+
+export const notificationsApi = {
+  async listForUser(userId: string): Promise<AppNotification[]> {
+    mockStore.refresh();
+    return delay(
+      clone(
+        mockStore.data.notifications
+          .filter((notification) => notification.recipientId === userId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      ),
+    );
+  },
+  async markRead(notificationId: string, userId: string): Promise<void> {
+    mockStore.refresh();
+    const notification = mockStore.data.notifications.find(
+      (item) => item.id === notificationId && item.recipientId === userId,
+    );
+    if (!notification || notification.readAt) return;
+    notification.readAt = nowIso();
+    mockStore.save();
+    await delay(undefined);
+  },
+  async markAllRead(userId: string): Promise<void> {
+    mockStore.refresh();
+    const readAt = nowIso();
+    let changed = false;
+    for (const notification of mockStore.data.notifications) {
+      if (notification.recipientId === userId && !notification.readAt) {
+        notification.readAt = readAt;
+        changed = true;
+      }
+    }
+    if (changed) mockStore.save();
+    await delay(undefined);
   },
 };
 
@@ -364,6 +459,7 @@ export const ordersApi = {
     if (input.paymentMode === 'CREDIT') {
       ledgersApi._debit(input.retailer.uid, order.grandTotal, order.orderNumber);
     }
+    notifyOrderStakeholders(order, 'ORDER_SUBMITTED', input.retailer.uid);
     mockStore.save();
     return delay(clone(order));
   },
@@ -412,6 +508,7 @@ export const ordersApi = {
     // Reserve stock so it is no longer available-to-promise.
     for (const item of o.items) holdStock(item.productId, item.approvedQty);
 
+    notifyOrderStakeholders(o, 'ORDER_APPROVED', input.by);
     mockStore.save();
     return delay(clone(o));
   },
@@ -483,6 +580,9 @@ export const ordersApi = {
       }
     }
 
+    if (prev !== status) {
+      notifyOrderStakeholders(o, 'ORDER_STATUS_UPDATED', by);
+    }
     mockStore.save();
     return delay(clone(o));
   },

@@ -263,6 +263,24 @@ export interface Order {
   updatedAt: string;
 }
 
+export type NotificationType =
+  | 'ORDER_SUBMITTED'
+  | 'ORDER_APPROVED'
+  | 'ORDER_STATUS_UPDATED';
+
+export interface AppNotification {
+  id: string;
+  recipientId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  orderId: string;
+  orderNumber: string;
+  href: string;
+  createdAt: string;
+  readAt?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Ledger & Inventory logs
 // ---------------------------------------------------------------------------

@@ -1,25 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogIn, TriangleAlert } from 'lucide-react';
 import { AuthShell } from '@/components/layout/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
+import { FullScreenLoader } from '@/components/ui/Loader';
 import { useAuth } from '@/context/AuthContext';
 import { DEMO_LOGINS, DEMO_PASSWORD } from '@/data/seed';
 import { DEMO_MODE } from '@/lib/firebase';
 import { BRAND_FULL_NAME } from '@/config/brand';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const redirectFor = (role: string) => (role === 'retailer' ? '/app' : '/admin');
 
-  const redirectFor = (role: string) =>
-    role === 'retailer' ? '/app' : '/admin';
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(redirectFor(user.role), { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +46,10 @@ export function LoginPage() {
     setPassword(DEMO_PASSWORD);
     setError(null);
   };
+
+  if (authLoading) {
+    return <FullScreenLoader label="Checking your saved session…" />;
+  }
 
   return (
     <AuthShell>
